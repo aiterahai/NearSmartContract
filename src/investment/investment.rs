@@ -118,8 +118,10 @@ impl Contract {
     }
 
     #[payable]
-    pub fn distribute_token(&mut self) {
-        assert!(self.waiting_callback_count == 0, "add investor not ready.");
+    pub fn distribute_token(&mut self, distribute_count: u32) {
+        assert!(self.waiting_callback_count == 0, "distribute token is already running.");
+
+        let mut distribute_count = distribute_count;
 
         self.waiting_callback_count += 10000;
 
@@ -128,6 +130,10 @@ impl Contract {
             if let Some(mut investment) = self.investors.get(&investor_account_id) {
                 if investment.remaining_payouts == 0 {
                     continue;
+                }
+
+                if distribute_count == 0 {
+                    break
                 }
 
                 let (current_year, currnet_month, current_day) = get_current_date();
@@ -143,6 +149,8 @@ impl Contract {
                 if (next_year as u32) * 10000 + next_month * 100 + next_day > (current_year as u32) * 10000 + currnet_month * 100 + current_day {
                     continue;
                 }
+
+                distribute_count -= 1;
 
                 let amount = if investment.remaining_payouts == 1 {
                     investment.total_amount - investment.paid_amount
