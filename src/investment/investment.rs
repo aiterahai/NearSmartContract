@@ -83,7 +83,15 @@ impl Contract {
         result
     }
 
+    pub fn reset_waiting_callback_count(&mut self) {
+        assert_eq!(env::predecessor_account_id(), self.owner_id, "Only the contract owner can add an investor.");
+        
+        self.waiting_callback_count = 0;
+    }
+
     pub fn add_investor(&mut self, account_id: AccountId, investment: InvestmentInput) {
+        assert!(self.waiting_callback_count == 0, "add investor not ready.");
+
         assert_eq!(env::predecessor_account_id(), self.owner_id, "Only the contract owner can add an investor.");
         
         assert!(is_valid_date_format(&investment.start_date), "Invalid date format. Please use YYYY-MM-DD format.");
@@ -111,6 +119,10 @@ impl Contract {
 
     #[payable]
     pub fn distribute_token(&mut self) {
+        assert!(self.waiting_callback_count == 0, "add investor not ready.");
+
+        self.waiting_callback_count += 10000;
+
         let investor_keys: Vec<AccountId> = self.investors.keys().collect();
         for investor_account_id in investor_keys {
             if let Some(mut investment) = self.investors.get(&investor_account_id) {
@@ -144,6 +156,8 @@ impl Contract {
                 investment.remaining_payouts -= 1;
                 investment.paid_amount += amount;
 
+                self.waiting_callback_count += 1;
+
                 Promise::new(self.token_contract_address.clone())
                 .function_call(
                     "ft_transfer".to_string(),
@@ -160,12 +174,14 @@ impl Contract {
                 ).then(Self::ext(env::current_account_id()).on_ft_transfer_success(investor_account_id, InvestmentJson::from(investment)));
             }
         }
+        self.waiting_callback_count -= 10000;
     }
 
 
     #[private]
     pub fn on_ft_transfer_success(&mut self, #[callback_result] last_result: Result<(), PromiseError>, investor_account_id: AccountId, investment: InvestmentJson) {
         let investment = Investment::from(investment);
+        self.waiting_callback_count -= 1;
         match last_result {
             Ok(_) => {
                 self.investors.insert(&investor_account_id, &investment);

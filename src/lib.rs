@@ -19,6 +19,8 @@ pub struct Contract {
     pub total_supply: Balance,
 
     pub investors: UnorderedMap<AccountId, Investment>,
+
+    pub waiting_callback_count: u16,
 }
 
 #[near_bindgen]
@@ -34,6 +36,7 @@ impl Contract {
             token_contract_address: token_contract_address,
             total_supply: total_supply.into(),
             investors: UnorderedMap::new("Investors".try_to_vec().unwrap()),
+            waiting_callback_count: 0
         };
         this
     }
