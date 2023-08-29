@@ -76,6 +76,7 @@ pub struct InvestmentInput {
 #[near_bindgen]
 impl Contract {
     pub fn get_all_investors(&self) -> Vec<(AccountId, Investment)> {
+        assert_eq!(env::predecessor_account_id(), self.owner_id, "Only the contract owner can get all investors.");
         let mut result: Vec<(AccountId, Investment)> = Vec::new();
         for (account_id, investment) in self.investors.iter() {
             result.push((account_id, investment));
