@@ -85,7 +85,7 @@ impl Contract {
     }
 
     pub fn reset_waiting_callback_count(&mut self) {
-        assert_eq!(env::predecessor_account_id(), self.owner_id, "Only the contract owner can add an investor.");
+        assert_eq!(env::predecessor_account_id(), self.owner_id, "Only the contract owner can reset waiting callback count");
         
         self.waiting_callback_count = 0;
     }
@@ -121,6 +121,7 @@ impl Contract {
     #[payable]
     pub fn distribute_token(&mut self, distribute_count: u32) {
         assert!(self.waiting_callback_count == 0, "distribute token is already running.");
+        assert_eq!(env::predecessor_account_id(), self.owner_id, "Only the contract owner can distribute token");
 
         let mut distribute_count = distribute_count;
 
@@ -189,8 +190,8 @@ impl Contract {
 
     #[private]
     pub fn on_ft_transfer_success(&mut self, #[callback_result] last_result: Result<(), PromiseError>, investor_account_id: AccountId, investment: InvestmentJson) {
-        let investment = Investment::from(investment);
         self.waiting_callback_count -= 1;
+        let investment = Investment::from(investment);
         match last_result {
             Ok(_) => {
                 self.investors.insert(&investor_account_id, &investment);
